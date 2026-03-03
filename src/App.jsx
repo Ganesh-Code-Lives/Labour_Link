@@ -24,9 +24,7 @@ import AdminDashboard from './dashboards/admin/AdminDashboard';
 import { AuthContext } from './context/AuthContext';
 
 const RootRedirect = () => {
-  const { userRole, loading } = React.useContext(AuthContext);
-
-  if (loading) return null;
+  const { userRole } = React.useContext(AuthContext);
 
   switch (userRole) {
     case 'customer': return <Navigate to="/customer" replace />;
