@@ -1,42 +1,32 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
-import { UserPlus } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 
-const Register = () => {
+const Onboarding = () => {
+    const { currentUser } = useContext(AuthContext);
+    const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
+        name: currentUser?.displayName || '',
+        phone: currentUser?.phoneNumber || '',
         address: '',
-        password: '',
         role: 'customer',
-        categoryId: '',
+        categoryId: '', 
         experience: 0,
-        pricing: 0,
+        pricing: 0
     });
 
     const [categories, setCategories] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [fetchingCats, setFetchingCats] = useState(true);
 
-    const { signup, signInWithGoogle, currentUser } = useContext(AuthContext);
-    const navigate = useNavigate();
-
-    // Redirect if already logged in
-    React.useEffect(() => {
-        if (currentUser) {
-            navigate('/');
-        }
-    }, [currentUser, navigate]);
-
     useEffect(() => {
-        // Fetch categories for Labourer registration dropdown
         const fetchCategories = async () => {
             try {
                 const querySnapshot = await getDocs(collection(db, 'categories'));
@@ -46,7 +36,6 @@ const Register = () => {
                 }));
                 setCategories(catData);
             } catch (error) {
-                // Will throw until Firestore runs
                 console.warn('Could not load categories yet:', error);
             } finally {
                 setFetchingCats(false);
@@ -61,36 +50,48 @@ const Register = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleRegister = async (e) => {
+    const handleComplete = async (e) => {
         e.preventDefault();
 
         if (formData.role === 'labourer' && !formData.categoryId) {
             toast.error('Please select a service category');
             return;
         }
-
-        try {
-            setIsLoading(true);
-            await signup(formData.email, formData.password, formData);
-            toast.success('Registration successful!');
-            navigate('/');
-        } catch (error) {
-            console.error("Registration Error: ", error);
-            toast.error(error.message || 'Failed to register');
-        } finally {
-            setIsLoading(false);
+        if (!formData.name || !formData.phone || !formData.address) {
+            toast.error('Please fill in all personal details');
+            return;
         }
-    };
 
-    const handleGoogleLogin = async () => {
         try {
             setIsLoading(true);
-            await signInWithGoogle();
-            toast.success('Google Login successful!');
+            
+            // Create user document inside Firestore
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                name: formData.name,
+                role: formData.role,
+                phone: formData.phone,
+                address: formData.address,
+                createdAt: serverTimestamp()
+            });
+
+            if (formData.role === 'labourer') {
+                await setDoc(doc(db, 'labourers', currentUser.uid), {
+                    userRef: doc(db, 'users', currentUser.uid),
+                    categoryRef: doc(db, 'categories', formData.categoryId),
+                    experience: Number(formData.experience) || 0,
+                    pricing: Number(formData.pricing) || 0,
+                    availabilityStatus: 'available',
+                    ratingAvg: 0
+                });
+            }
+
+            toast.success('Account setup complete!');
             navigate('/');
         } catch (error) {
-            console.error("Google Login Error: ", error);
-            toast.error(error.message || 'Failed to login with Google');
+            console.error("Onboarding Error: ", error);
+            toast.error(error.message || 'Failed to complete setup');
         } finally {
             setIsLoading(false);
         }
@@ -102,21 +103,16 @@ const Register = () => {
                 <div className="p-8">
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-light/10 text-primary mb-4">
-                            <UserPlus className="w-8 h-8" />
+                            <ClipboardList className="w-8 h-8" />
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create an Account</h2>
-                        <p className="text-gray-500 dark:text-gray-400 mt-2">Join LabourLink today</p>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Complete Your Profile</h2>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">Just a few more details needed!</p>
                     </div>
 
-                    <form onSubmit={handleRegister} className="space-y-4">
+                    <form onSubmit={handleComplete} className="space-y-4">
                         <Input
                             id="name" name="name" type="text" label="Full Name"
                             value={formData.name} onChange={handleChange} placeholder="John Doe" required
-                        />
-
-                        <Input
-                            id="email" name="email" type="email" label="Email Address"
-                            value={formData.email} onChange={handleChange} placeholder="you@example.com" required
                         />
 
                         <Input
@@ -127,11 +123,6 @@ const Register = () => {
                         <Input
                             id="address" name="address" type="text" label="Home Address"
                             value={formData.address} onChange={handleChange} placeholder="Main St, City" required
-                        />
-
-                        <Input
-                            id="password" name="password" type="password" label="Password"
-                            value={formData.password} onChange={handleChange} placeholder="••••••••" required
                         />
 
                         {/* Role Selection */}
@@ -180,15 +171,9 @@ const Register = () => {
                                         disabled={fetchingCats}
                                     >
                                         <option value="" disabled>Select your primary skill</option>
-                                        {categories.length > 0 ? (
-                                            categories.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
-                                            ))
-                                        ) : (
-                                            <option value="placeholder_plumber">Plumber (Placeholder)</option>
-                                        )}
-                                        {categories.length === 0 && <option value="placeholder_electrician">Electrician (Placeholder)</option>}
-                                        {categories.length === 0 && <option value="placeholder_painter">Painter (Placeholder)</option>}
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <Input
@@ -196,72 +181,22 @@ const Register = () => {
                                     value={formData.experience} onChange={handleChange} placeholder="e.g. 5" min="0" required={formData.role === 'labourer'}
                                 />
                                 <Input
-                                    id="pricing" name="pricing" type="number" label="Hourly Rate (₹)"
-                                    value={formData.pricing} onChange={handleChange} placeholder="e.g. 500" min="0" required={formData.role === 'labourer'}
+                                    id="pricing" name="pricing" type="number" label="Hourly Rate ($)"
+                                    value={formData.pricing} onChange={handleChange} placeholder="e.g. 20" min="0" required={formData.role === 'labourer'}
                                 />
                             </div>
                         )}
 
                         <div className="pt-4">
                             <Button type="submit" fullWidth isLoading={isLoading}>
-                                Create Account
+                                Finish Setup
                             </Button>
                         </div>
                     </form>
-
-                    <div className="mt-6">
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
-                            </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">Or continue with</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6">
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                fullWidth 
-                                onClick={handleGoogleLogin}
-                                isLoading={isLoading}
-                                className="flex justify-center items-center gap-2"
-                            >
-                                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                    <path
-                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                        fill="#4285F4"
-                                    />
-                                    <path
-                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                        fill="#34A853"
-                                    />
-                                    <path
-                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                                        fill="#FBBC05"
-                                    />
-                                    <path
-                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                        fill="#EA4335"
-                                    />
-                                    <path d="M1 1h22v22H1z" fill="none" />
-                                </svg>
-                                Google
-                            </Button>
-                        </div>
-                    </div>
-
-                    <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-                        Already have an account?{' '}
-                        <Link to="/login" className="font-medium text-primary hover:text-primary-dark transition-colors">
-                            Sign in
-                        </Link>
-                    </p>
                 </div>
             </div>
         </div>
     );
 };
 
-export default Register;
+export default Onboarding;

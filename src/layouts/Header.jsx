@@ -48,9 +48,18 @@ const Header = ({ setSidebarOpen }) => {
 
                 {/* User Profile */}
                 <div className="flex items-center gap-2 pl-4 border-l border-gray-200 dark:border-gray-800">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold">
-                        {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
-                    </div>
+                    {currentUser?.photoURL ? (
+                        <img 
+                            src={currentUser.photoURL} 
+                            alt={currentUser?.name || 'Profile'} 
+                            className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                            referrerPolicy="no-referrer"
+                        />
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold shadow-sm">
+                            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+                        </div>
+                    )}
                     <div className="hidden md:block text-sm">
                         <p className="font-medium text-gray-700 dark:text-gray-200">{currentUser?.name || 'User'}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{currentUser?.role || ''}</p>

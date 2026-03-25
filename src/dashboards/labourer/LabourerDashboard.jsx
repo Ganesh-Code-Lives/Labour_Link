@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { subscribeToLabourerRequests, updateJobStatus } from '../../firebase/services';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
@@ -14,71 +14,47 @@ const LabourerDashboard = () => {
     const [actionLoading, setActionLoading] = useState(null); // specific job ID loading
 
     useEffect(() => {
-        const fetchRequests = async () => {
-            try {
-                if (!currentUser?.uid) return;
+        let unsubscribe = () => {};
 
-                // Query jobs referencing this Labourer
-                const labourerRef = doc(db, 'labourers', currentUser.uid);
-                const q = query(
-                    collection(db, 'jobRequests'),
-                    where('labourerRef', '==', labourerRef)
-                );
+        const setupSubscription = () => {
+            if (!currentUser?.uid) return;
+            setLoading(true);
 
-                const querySnapshot = await getDocs(q);
-
-                const jobs = await Promise.all(querySnapshot.docs.map(async (jobDoc) => {
-                    const jobData = jobDoc.data();
-                    let customerName = 'Unknown User';
-                    let customerPhone = 'N/A';
-                    let customerAddress = 'N/A';
-
-                    if (jobData.customerRef) {
-                        const cSnap = await getDoc(jobData.customerRef);
-                        if (cSnap.exists()) {
-                            const cData = cSnap.data();
-                            customerName = cData.name;
-                            customerPhone = cData.phone || 'N/A';
-                            customerAddress = cData.address || 'N/A';
-                        }
-                    }
-
-                    return {
-                        id: jobDoc.id,
-                        ...jobData,
-                        customerName,
-                        customerPhone,
-                        customerAddress,
-                        date: jobData.requestDate ? jobData.requestDate.toDate().toLocaleDateString() : 'N/A'
-                    };
+            unsubscribe = subscribeToLabourerRequests(currentUser.uid, (requestsData) => {
+                const formattedRequests = requestsData.map(req => ({
+                    id: req.id,
+                    ...req,
+                    customerName: req.customer?.name || 'Unknown User',
+                    customerPhone: req.customer?.phone || 'N/A',
+                    customerAddress: req.customer?.address || 'N/A',
+                    date: req.createdAt ? req.createdAt.toDate().toLocaleDateString() : 'N/A'
                 }));
 
-                setRequests(jobs.sort((a, b) => new Date(b.date) - new Date(a.date)));
-            } catch (error) {
-                console.error("Error fetching requests:", error);
-            } finally {
+                setRequests(formattedRequests);
                 setLoading(false);
-            }
+            });
         };
 
-        fetchRequests();
+        setupSubscription();
+
+        return () => unsubscribe();
     }, [currentUser]);
 
     const handleUpdateStatus = async (jobId, newStatus) => {
         try {
             setActionLoading(jobId);
 
-            const jobRef = doc(db, 'jobRequests', jobId);
-            await updateDoc(jobRef, {
-                status: newStatus
-            });
+            await updateJobStatus(jobId, newStatus);
 
-            // Update local state directly to respond quickly
-            setRequests(prev => prev.map(job =>
-                job.id === jobId ? { ...job, status: newStatus } : job
-            ));
-
-            toast.success(`Job request ${newStatus}!`);
+            if (newStatus === 'accepted') {
+                toast.success('Request Accepted');
+            } else if (newStatus === 'rejected') {
+                toast.success('Request Rejected');
+            } else if (newStatus === 'completed') {
+                toast.success('Job Completed');
+            } else {
+                toast.success(`Job request ${newStatus}!`);
+            }
         } catch (error) {
             toast.error('Failed to update status');
             console.error(error);
@@ -147,13 +123,17 @@ const LabourerDashboard = () => {
                         {activeRequests.map(job => (
                             <div key={job.id} className="p-5 border border-primary/30 bg-primary-light/5 dark:bg-primary/5 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
-                                    <div className="flex items-center gap-3 mb-1">
+                                    <div className="flex items-center gap-3 mb-2">
                                         <h4 className="font-bold text-lg text-gray-900 dark:text-white">{job.customerName}</h4>
                                         <StatusBadge status={job.status} />
                                     </div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Requested: {job.date}</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 font-medium">Contact: {job.customerPhone}</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-300">Address: {job.customerAddress}</p>
+                                    <h5 className="font-bold text-primary mb-1">{job.jobTitle}</h5>
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{job.jobDescription}</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                        <p className="text-gray-500 dark:text-gray-400"><strong>Requested Date:</strong> {job.serviceDate || job.date}</p>
+                                        <p className="text-gray-500 dark:text-gray-400"><strong>Location:</strong> {job.serviceLocation}</p>
+                                        <p className="text-gray-500 dark:text-gray-400 font-medium text-primary"><strong>Contact:</strong> {job.customerPhone}</p>
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-3">
@@ -173,14 +153,18 @@ const LabourerDashboard = () => {
                         {pendingRequests.map(job => (
                             <div key={job.id} className="p-5 border border-gray-200 dark:border-gray-800 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                 <div>
-                                    <div className="flex items-center gap-3 mb-1">
+                                    <div className="flex items-center gap-3 mb-2">
                                         <h4 className="font-bold text-lg text-gray-900 dark:text-white">{job.customerName}</h4>
-                                        <span className="text-xs text-gray-500">{job.date}</span>
+                                        <StatusBadge status={job.status} />
                                     </div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 max-w-lg mb-2">
-                                        Client is located at {job.customerAddress}. (Contact number will be revealed after accepting)
+                                    <h5 className="font-bold text-primary mb-1">{job.jobTitle}</h5>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                                        {job.jobDescription}
                                     </p>
-                                    <StatusBadge status={job.status} />
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                        <span><strong>Date:</strong> {job.serviceDate || job.date}</span>
+                                        <span><strong>Location:</strong> {job.serviceLocation}</span>
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-3">

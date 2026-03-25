@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase/config';
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { getDashboardStats, getCategories, addCategory, deleteCategory, seedDatabase } from '../../firebase/services';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
@@ -15,47 +14,34 @@ const AdminDashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [addingCat, setAddingCat] = useState(false);
+    const [seeding, setSeeding] = useState(false);
+
+    const handleSeed = async () => {
+        try {
+            setSeeding(true);
+            await seedDatabase();
+            toast.success("Database seeded! Please refresh.");
+        } catch (error) {
+            toast.error("Failed to seed database.");
+        } finally {
+            setSeeding(false);
+        }
+    };
 
     useEffect(() => {
         const fetchAdminData = async () => {
             try {
-                // Fetch Users explicitly checking roles
-                const usersSnap = await getDocs(collection(db, 'users'));
-                const usersList = usersSnap.docs.map(d => d.data());
-
-                const customerCount = usersList.filter(u => u.role === 'customer').length;
-                const labourerCount = usersList.filter(u => u.role === 'labourer').length;
-
-                // Fetch Jobs for statistics
-                const jobsSnap = await getDocs(collection(db, 'jobRequests'));
-                let pending = 0, accepted = 0, completed = 0, rejected = 0;
-
-                jobsSnap.docs.forEach(doc => {
-                    const status = doc.data().status;
-                    if (status === 'pending') pending++;
-                    if (status === 'accepted') accepted++;
-                    if (status === 'completed') completed++;
-                    if (status === 'rejected') rejected++;
-                });
-
+                const statsData = await getDashboardStats();
                 setStats({
-                    users: customerCount,
-                    labourers: labourerCount,
-                    jobs: jobsSnap.size,
-                    completedJobs: completed
+                    users: statsData.totalUsers,
+                    labourers: statsData.totalLabourers,
+                    jobs: statsData.totalRequests,
+                    completedJobs: statsData.completedJobs
                 });
+                setChartData(statsData.chartData);
 
-                setChartData([
-                    { name: 'Pending', count: pending, fill: '#eab308' },
-                    { name: 'Accepted', count: accepted, fill: '#3b82f6' },
-                    { name: 'Completed', count: completed, fill: '#22c55e' },
-                    { name: 'Rejected', count: rejected, fill: '#ef4444' }
-                ]);
-
-                // Fetch Categories
-                const catSnap = await getDocs(collection(db, 'categories'));
-                setCategories(catSnap.docs.map(c => ({ id: c.id, ...c.data() })));
-
+                const cats = await getCategories();
+                setCategories(cats);
             } catch (error) {
                 console.error("Admin fetch error:", error);
             } finally {
@@ -72,15 +58,10 @@ const AdminDashboard = () => {
 
         try {
             setAddingCat(true);
-            const categoryId = doc(collection(db, 'categories')).id;
+            
+            const categoryId = await addCategory(newCategory.trim());
 
-            const newCatObj = {
-                categoryName: newCategory.trim()
-            };
-
-            await setDoc(doc(db, 'categories', categoryId), newCatObj);
-
-            setCategories([...categories, { id: categoryId, ...newCatObj }]);
+            setCategories([...categories, { id: categoryId, categoryName: newCategory.trim() }]);
             setNewCategory('');
             toast.success('Category added successfully');
         } catch (error) {
@@ -94,7 +75,7 @@ const AdminDashboard = () => {
     const handleDeleteCategory = async (categoryId) => {
         if (!window.confirm('Delete this category?')) return;
         try {
-            await deleteDoc(doc(db, 'categories', categoryId));
+            await deleteCategory(categoryId);
             setCategories(categories.filter(c => c.id !== categoryId));
             toast.success('Category deleted');
         } catch (error) {
@@ -108,6 +89,12 @@ const AdminDashboard = () => {
 
     return (
         <div className="space-y-8 animate-fade-in">
+
+            <div className="flex justify-end mb-4">
+                <Button variant="outline" onClick={handleSeed} isLoading={seeding}>
+                    Seed Dummy Data
+                </Button>
+            </div>
 
             {/* Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

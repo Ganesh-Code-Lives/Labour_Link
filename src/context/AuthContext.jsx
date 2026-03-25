@@ -1,12 +1,13 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { auth, db } from '../firebase/config';
+import { auth, db, googleProvider } from '../firebase/config';
 import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    signOut
+    signOut,
+    signInWithPopup
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import FullPageLoader from '../components/ui/FullPageLoader';
 
 export const AuthContext = createContext();
@@ -19,31 +20,36 @@ export const AuthProvider = ({ children }) => {
     const [userRole, setUserRole] = useState(null);
 
     useEffect(() => {
-        const unsub = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    const docRef = doc(db, 'users', user.uid);
-                    const docSnap = await getDoc(docRef);
+        let unsubscribeSnapshot = null;
 
+        const unsubAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const docRef = doc(db, 'users', user.uid);
+                
+                unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setUserRole(docSnap.data().role);
                         setCurrentUser({ ...user, ...docSnap.data() });
                     } else {
-                        setUserRole(null);
+                        setUserRole('pending'); // User signed in, but doc not written yet
                         setCurrentUser(user);
                     }
-                } catch (error) {
+                }, (error) => {
                     console.error('Error fetching user role: ', error);
                     setUserRole(null);
                     setCurrentUser(user);
-                }
+                });
             } else {
+                if (unsubscribeSnapshot) unsubscribeSnapshot();
                 setCurrentUser(null);
                 setUserRole(null);
             }
         });
 
-        return unsub;
+        return () => {
+            unsubAuth();
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+        };
     }, []);
 
     const login = (email, password) => {
@@ -68,8 +74,8 @@ export const AuthProvider = ({ children }) => {
             await setDoc(doc(db, 'labourers', user.uid), {
                 userRef: doc(db, 'users', user.uid),
                 categoryRef: doc(db, 'categories', userData.categoryId),
-                experience: userData.experience || 0,
-                pricing: userData.pricing || 0,
+                experience: Number(userData.experience) || 0,
+                pricing: Number(userData.pricing) || 0,
                 availabilityStatus: 'available',
                 ratingAvg: 0
             });
@@ -82,6 +88,10 @@ export const AuthProvider = ({ children }) => {
         return signOut(auth);
     };
 
+    const signInWithGoogle = () => {
+        return signInWithPopup(auth, googleProvider);
+    };
+
     const loading = currentUser === undefined;
 
     const value = {
@@ -90,6 +100,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         signup,
+        signInWithGoogle,
         logout
     };
 

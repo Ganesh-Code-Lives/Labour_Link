@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { subscribeToCustomerRequests, getCategories, cancelJobRequest } from '../../firebase/services';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
@@ -14,62 +14,39 @@ const CustomerDashboard = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchActiveJobs = async () => {
+        let unsubscribe = () => {};
+
+        const setupSubscription = async () => {
+            if (!currentUser?.uid) return;
+            setLoading(true);
+
             try {
-                if (!currentUser?.uid) return;
+                const cats = await getCategories();
+                const catMap = cats.reduce((acc, c) => ({ ...acc, [c.id]: c.categoryName }), {});
 
-                // Create document reference to current user to match ER diagram rules
-                const userRef = doc(db, 'users', currentUser.uid);
-
-                const q = query(
-                    collection(db, 'jobRequests'),
-                    where('customerRef', '==', userRef)
-                );
-
-                const querySnapshot = await getDocs(q);
-
-                const jobs = await Promise.all(querySnapshot.docs.map(async (jobDoc) => {
-                    const jobData = jobDoc.data();
-
-                    let labourerName = 'Unknown Labourer';
-                    let categoryName = 'Unknown Category';
-
-                    // Fetch Labourer details from labourerRef
-                    if (jobData.labourerRef) {
-                        const labourerSnap = await getDoc(jobData.labourerRef);
-                        if (labourerSnap.exists()) {
-                            const LData = labourerSnap.data();
-                            // Fetch name from userRef inside Labourer
-                            if (LData.userRef) {
-                                const uSnap = await getDoc(LData.userRef);
-                                if (uSnap.exists()) labourerName = uSnap.data().name;
-                            }
-                            // Fetch Category Name
-                            if (LData.categoryRef) {
-                                const cSnap = await getDoc(LData.categoryRef);
-                                if (cSnap.exists()) categoryName = cSnap.data().categoryName;
-                            }
-                        }
-                    }
-
-                    return {
-                        id: jobDoc.id,
-                        ...jobData,
-                        labourerName,
-                        categoryName,
-                        date: jobData.requestDate ? jobData.requestDate.toDate().toLocaleDateString() : 'N/A'
-                    };
-                }));
-
-                setActiveJobs(jobs.sort((a, b) => new Date(b.date) - new Date(a.date)));
+                unsubscribe = subscribeToCustomerRequests(currentUser.uid, (requests) => {
+                    const formattedRequests = requests.map(req => {
+                        const catId = req.labourerDetails?.categoryRef?.id;
+                        return {
+                            id: req.id,
+                            ...req,
+                            labourerName: req.labourer?.name || 'Unknown',
+                            categoryName: catId ? catMap[catId] || 'Service' : 'Service',
+                            date: req.createdAt ? req.createdAt.toDate().toLocaleDateString() : 'N/A'
+                        };
+                    });
+                    setActiveJobs(formattedRequests);
+                    setLoading(false);
+                });
             } catch (error) {
-                console.error("Error fetching jobs:", error);
-            } finally {
+                console.error("Error setting up job subscription:", error);
                 setLoading(false);
             }
         };
 
-        fetchActiveJobs();
+        setupSubscription();
+
+        return () => unsubscribe();
     }, [currentUser]);
 
     return (
@@ -105,6 +82,7 @@ const CustomerDashboard = () => {
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-800 text-sm string text-gray-500 dark:text-gray-400">
                                     <th className="pb-3 font-medium">Date</th>
+                                    <th className="pb-3 font-medium">Job Title</th>
                                     <th className="pb-3 font-medium">Service</th>
                                     <th className="pb-3 font-medium">Labourer</th>
                                     <th className="pb-3 font-medium">Status</th>
@@ -115,18 +93,40 @@ const CustomerDashboard = () => {
                                 {activeJobs.map(job => (
                                     <tr key={job.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                         <td className="py-4 text-gray-900 dark:text-gray-300">{job.date}</td>
+                                        <td className="py-4 font-bold text-primary">{job.jobTitle || 'General'}</td>
                                         <td className="py-4 font-medium text-gray-900 dark:text-white">{job.categoryName}</td>
                                         <td className="py-4 text-gray-600 dark:text-gray-400">{job.labourerName}</td>
                                         <td className="py-4"><StatusBadge status={job.status} /></td>
-                                        <td className="py-4 text-right">
+                                        <td className="py-4 text-right flex justify-end gap-2">
+                                            {job.status === 'pending' && (
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    className="text-red-500 border-red-200 hover:bg-red-50"
+                                                    onClick={async () => {
+                                                        if(window.confirm('Cancel this request?')) {
+                                                            try {
+                                                                await cancelJobRequest(job.id);
+                                                                toast.success('Request cancelled');
+                                                            } catch(e) {
+                                                                toast.error('Failed to cancel');
+                                                            }
+                                                        }
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            )}
                                             {job.status === 'completed' && !job.reviewed ? (
                                                 <Button size="sm" variant="outline" onClick={() => navigate(`/customer/review/${job.id}`)}>
                                                     Leave Review
                                                 </Button>
                                             ) : (
-                                                <span className="text-gray-400 text-xs italic">
-                                                    {job.reviewed ? 'Reviewed' : 'Awaiting Completion'}
-                                                </span>
+                                                job.status !== 'pending' && (
+                                                    <span className="text-gray-400 text-xs italic">
+                                                        {job.reviewed ? 'Reviewed' : 'Active / Completed'}
+                                                    </span>
+                                                )
                                             )}
                                         </td>
                                     </tr>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { submitReview } from '../../firebase/services';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { doc, getDoc, collection, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
 import { Star, Loader2 } from 'lucide-react';
@@ -69,38 +70,8 @@ const ReviewJob = () => {
 
         try {
             setSubmitting(true);
-            const newReviewId = doc(collection(db, 'reviews')).id;
-
-            // 1. Create the Review document
-            await setDoc(doc(db, 'reviews', newReviewId), {
-                requestRef: doc(db, 'jobRequests', job.id),
-                customerRef: doc(db, 'users', currentUser.uid),
-                labourerRef: job.labourerRef,
-                rating,
-                comment,
-                createdAt: serverTimestamp()
-            });
-
-            // 2. Mark the Job Request as reviewed
-            await updateDoc(doc(db, 'jobRequests', job.id), {
-                reviewed: true
-            });
-
-            // 3. Update the Labourer's aggregate rating using specific document structure
-            const labourerDoc = await getDoc(job.labourerRef);
-            if (labourerDoc.exists()) {
-                const lData = labourerDoc.data();
-                const currentAvg = lData.ratingAvg || 0;
-                const currentCount = lData.reviewCount || 0;
-
-                // Simulating a calculation: (Current total rating + new rating) / (total count + 1)
-                const newAvg = ((currentAvg * currentCount) + rating) / (currentCount + 1);
-
-                await updateDoc(job.labourerRef, {
-                    ratingAvg: newAvg,
-                    reviewCount: increment(1)
-                });
-            }
+            
+            await submitReview(job.id, currentUser.uid, job.labourerRef.id, rating, comment);
 
             toast.success('Review submitted! Thank you.');
             navigate('/customer');

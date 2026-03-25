@@ -10,6 +10,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 // Auth Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Onboarding from './pages/Onboarding';
 
 // Customer Views
 import CustomerDashboard from './dashboards/customer/CustomerDashboard';
@@ -18,6 +19,7 @@ import ReviewJob from './dashboards/customer/ReviewJob';
 
 // Labourer Views
 import LabourerDashboard from './dashboards/labourer/LabourerDashboard';
+import ProfileSettings from './dashboards/labourer/ProfileSettings';
 
 // Admin Views
 import AdminDashboard from './dashboards/admin/AdminDashboard';
@@ -27,6 +29,7 @@ const RootRedirect = () => {
   const { userRole } = React.useContext(AuthContext);
 
   switch (userRole) {
+    case 'pending': return <Navigate to="/onboarding" replace />;
     case 'customer': return <Navigate to="/customer" replace />;
     case 'labourer': return <Navigate to="/labourer" replace />;
     case 'admin': return <Navigate to="/admin" replace />;
@@ -50,6 +53,11 @@ function App() {
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/onboarding" element={
+              <PrivateRoute>
+                <Onboarding />
+              </PrivateRoute>
+            } />
 
             {/* Protected Dashboard Routes nested inside Layout */}
             <Route element={<DashboardLayout />}>
@@ -75,6 +83,11 @@ function App() {
               <Route path="/labourer" element={
                 <PrivateRoute allowedRoles={['labourer']}>
                   <LabourerDashboard />
+                </PrivateRoute>
+              } />
+              <Route path="/labourer/profile" element={
+                <PrivateRoute allowedRoles={['labourer']}>
+                  <ProfileSettings />
                 </PrivateRoute>
               } />
 
