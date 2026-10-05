@@ -12,7 +12,7 @@ const Header = ({ setSidebarOpen }) => {
     const getPageTitle = () => {
         const path = location.pathname.split('/').pop();
         if (path === 'customer' || path === 'labourer' || path === 'admin') return 'Dashboard';
-        if (!path) return 'LabourLink';
+        if (!path) return 'TaskEarn';
         return path.charAt(0).toUpperCase() + path.slice(1).replace('-', ' ');
     };
 

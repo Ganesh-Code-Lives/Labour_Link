@@ -30,9 +30,9 @@ const ProfileSettings = () => {
                 const cats = await getCategories();
                 setCategories(cats);
 
-                // Fetch labourer doc & user doc
+                // Fetch student doc & user doc
                 const [labSnap, userSnap] = await Promise.all([
-                    getDoc(doc(db, 'labourers', currentUser.uid)),
+                    getDoc(doc(db, 'students', currentUser.uid)),
                     getDoc(doc(db, 'users', currentUser.uid))
                 ]);
 
@@ -72,7 +72,7 @@ const ProfileSettings = () => {
 
         try {
             setUpdating(true);
-            const labRef = doc(db, 'labourers', currentUser.uid);
+            const labRef = doc(db, 'students', currentUser.uid);
             
             await updateDoc(labRef, {
                 categoryRef: doc(db, 'categories', formData.categoryId),
@@ -107,7 +107,7 @@ const ProfileSettings = () => {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Profile Settings</h2>
-                        <p className="text-sm text-gray-500">Manage your professional information and availability.</p>
+                        <p className="text-sm text-gray-500">Manage your student profile and availability.</p>
                     </div>
                 </div>
 
@@ -136,7 +136,7 @@ const ProfileSettings = () => {
                         {/* Category Selection */}
                         <div className="space-y-1">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Professional Category
+                                Student Skill / Category
                             </label>
                             <select
                                 value={formData.categoryId}
@@ -189,7 +189,7 @@ const ProfileSettings = () => {
                         {/* Pricing */}
                         <Input
                             id="pricing"
-                            label="Hourly Rate (₹)"
+                            label="Expected Daily Pay (₹)"
                             type="number"
                             placeholder="e.g. 500"
                             value={formData.pricing}

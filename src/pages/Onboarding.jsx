@@ -77,7 +77,7 @@ const Onboarding = () => {
             });
 
             if (formData.role === 'labourer') {
-                await setDoc(doc(db, 'labourers', currentUser.uid), {
+                await setDoc(doc(db, 'students', currentUser.uid), {
                     userRef: doc(db, 'users', currentUser.uid),
                     categoryRef: doc(db, 'categories', formData.categoryId),
                     experience: Number(formData.experience) || 0,
@@ -88,7 +88,7 @@ const Onboarding = () => {
             }
 
             toast.success('Account setup complete!');
-            navigate('/');
+            navigate('/dashboard');
         } catch (error) {
             console.error("Onboarding Error: ", error);
             toast.error(error.message || 'Failed to complete setup');
@@ -106,7 +106,7 @@ const Onboarding = () => {
                             <ClipboardList className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Complete Your Profile</h2>
-                        <p className="text-gray-500 dark:text-gray-400 mt-2">Just a few more details needed!</p>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">Join TaskEarn — just a few more details!</p>
                     </div>
 
                     <form onSubmit={handleComplete} className="space-y-4">
@@ -139,7 +139,7 @@ const Onboarding = () => {
                                         : 'border-gray-200 text-gray-500 hover:border-primary/50 dark:border-gray-700 dark:text-gray-400'
                                         }`}
                                 >
-                                    Hire Workers
+                                    Post Tasks
                                 </button>
                                 <button
                                     type="button"
@@ -149,7 +149,7 @@ const Onboarding = () => {
                                         : 'border-gray-200 text-gray-500 hover:border-primary/50 dark:border-gray-700 dark:text-gray-400'
                                         }`}
                                 >
-                                    Find Work
+                                    Earn as Student
                                 </button>
                             </div>
                         </div>
@@ -159,7 +159,7 @@ const Onboarding = () => {
                             <div className="pt-2 animate-fade-in space-y-4">
                                 <div>
                                     <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Service Category <span className="text-red-500">*</span>
+                                        Student Skill / Category <span className="text-red-500">*</span>
                                     </label>
                                     <select
                                         id="categoryId"
@@ -181,8 +181,8 @@ const Onboarding = () => {
                                     value={formData.experience} onChange={handleChange} placeholder="e.g. 5" min="0" required={formData.role === 'labourer'}
                                 />
                                 <Input
-                                    id="pricing" name="pricing" type="number" label="Hourly Rate ($)"
-                                    value={formData.pricing} onChange={handleChange} placeholder="e.g. 20" min="0" required={formData.role === 'labourer'}
+                                    id="pricing" name="pricing" type="number" label="Expected Daily Pay (₹)"
+                                    value={formData.pricing} onChange={handleChange} placeholder="e.g. 500" min="0" required={formData.role === 'labourer'}
                                 />
                             </div>
                         )}

@@ -84,7 +84,7 @@ const SearchLabourer = () => {
                 <div className="flex-1 w-full">
                     <Input
                         id="search"
-                        placeholder="Search professionals by name..."
+                        placeholder="Search students by name..."
                         label="Search"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -151,7 +151,7 @@ const SearchLabourer = () => {
                                     isLoading={requestingId === lab.id}
                                     disabled={requestingId !== null && requestingId !== lab.id}
                                 >
-                                    Send Request
+                                    Hire Student
                                 </Button>
                             </div>
                         </div>
@@ -162,7 +162,7 @@ const SearchLabourer = () => {
                     <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Search className="w-8 h-8 text-gray-400" />
                     </div>
-                    <h4 className="text-gray-900 dark:text-white font-medium">No professionals found</h4>
+                    <h4 className="text-gray-900 dark:text-white font-medium">No students found</h4>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Try adjusting your filters or search term.</p>
                 </div>
             )}
@@ -173,7 +173,7 @@ const SearchLabourer = () => {
                     <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
                         <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Request to {selectedLabourer.user?.name}</h3>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Hire {selectedLabourer.user?.name}</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">{selectedLabourer.category?.categoryName || 'Service'}</p>
                             </div>
                             <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
@@ -183,7 +183,7 @@ const SearchLabourer = () => {
                         <form onSubmit={handleRequestSubmit} className="p-6 space-y-4">
                             <Input
                                 id="title" required
-                                label="Job Title" placeholder="e.g. Broken Pipe Repair"
+                                label="Task Title" placeholder="e.g. Data Entry for 2 Days"
                                 value={jobDetails.title} onChange={e => setJobDetails({...jobDetails, title: e.target.value})}
                                 className="mb-0"
                             />
@@ -199,7 +199,7 @@ const SearchLabourer = () => {
                             </div>
                             <Input
                                 id="date" required type="date"
-                                label="Requested Date"
+                                label="Task Start Date"
                                 value={jobDetails.date} onChange={e => setJobDetails({...jobDetails, date: e.target.value})}
                                 className="mb-0"
                             />
@@ -211,7 +211,7 @@ const SearchLabourer = () => {
                             />
                             <div className="pt-4 flex gap-3">
                                 <Button type="button" variant="outline" className="flex-1" onClick={handleCloseModal}>Cancel</Button>
-                                <Button type="submit" className="flex-1" isLoading={requestingId === selectedLabourer.id}>Confirm Request</Button>
+                                <Button type="submit" className="flex-1" isLoading={requestingId === selectedLabourer.id}>Confirm Hire</Button>
                             </div>
                         </form>
                     </div>

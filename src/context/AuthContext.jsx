@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
     // null     = confirmed logged out
     // object   = confirmed logged in user
     const [currentUser, setCurrentUser] = useState(undefined);
-    const [userRole, setUserRole] = useState(null);
+    const [userRole, setUserRole] = useState(undefined);
 
     useEffect(() => {
         let unsubscribeSnapshot = null;
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         if (userData.role === 'labourer') {
-            await setDoc(doc(db, 'labourers', user.uid), {
+            await setDoc(doc(db, 'students', user.uid), {
                 userRef: doc(db, 'users', user.uid),
                 categoryRef: doc(db, 'categories', userData.categoryId),
                 experience: Number(userData.experience) || 0,
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
         return signInWithPopup(auth, googleProvider);
     };
 
-    const loading = currentUser === undefined;
+    const loading = currentUser === undefined || (currentUser !== null && userRole === undefined);
 
     const value = {
         currentUser,
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
     // Show a stable full-page loader ONLY during the initial Firebase auth check.
     // Once resolved (loading = false), children are always rendered — no flicker.
     if (loading) {
-        return <FullPageLoader message="Loading LabourLink..." />;
+        return <FullPageLoader message="Loading TaskEarn..." />;
     }
 
     return (

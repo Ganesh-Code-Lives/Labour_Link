@@ -23,19 +23,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             case 'customer':
                 return [
                     { name: 'Dashboard', path: '/customer', icon: Home },
-                    { name: 'Search Labour', path: '/customer/search', icon: User },
-                    { name: 'My Requests', path: '/customer/requests', icon: List },
+                    { name: 'Find Students', path: '/customer/search', icon: User },
                 ];
             case 'labourer':
                 return [
-                    { name: 'Dashboard', path: '/labourer', icon: Home },
-                    { name: 'Job Requests', path: '/labourer/requests', icon: Briefcase },
-                    { name: 'Profile Settings', path: '/labourer/profile', icon: Settings },
+                    { name: 'My Gigs', path: '/labourer', icon: Home },
+                    { name: 'My Profile', path: '/labourer/profile', icon: Settings },
                 ];
             case 'admin':
                 return [
-                    { name: 'Dashboard', path: '/admin', icon: BarChart2 },
-                    { name: 'Manage Users', path: '/admin/users', icon: User },
+                    { name: 'Overview', path: '/admin', icon: BarChart2 },
+                    { name: 'Users', path: '/admin/users', icon: User },
                     { name: 'Categories', path: '/admin/categories', icon: List },
                     { name: 'System Logs', path: '/admin/logs', icon: Shield },
                 ];
@@ -43,6 +41,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 return [];
         }
     };
+
 
     const links = getLinks();
 
@@ -55,7 +54,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         <Briefcase className="w-6 h-6 text-primary dark:text-primary-light" />
                     </div>
                     <span className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                        Labour<span className="text-primary dark:text-primary-light">Link</span>
+                        Task<span className="text-primary dark:text-primary-light">Earn</span>
                     </span>
                 </div>
                 {/* Mobile Close Button */}

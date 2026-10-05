@@ -4,16 +4,16 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDK4ASn1oE2kKi2FMZIDQrKGx8kWxKjIPg",
-    authDomain: "labourlink-da32c.firebaseapp.com",
-    projectId: "labourlink-da32c",
-    storageBucket: "labourlink-da32c.firebasestorage.app",
-    messagingSenderId: "877042053061",
-    appId: "1:877042053061:web:7b8539b96e05155aa865ac",
-    measurementId: "G-S9TYCDEXFJ"
+    apiKey: "AIzaSyCoVxY6Pxphhqryek2YFBGviuUDOdLUFhk",
+    authDomain: "taskearn-27d45.firebaseapp.com",
+    projectId: "taskearn-27d45",
+    storageBucket: "taskearn-27d45.firebasestorage.app",
+    messagingSenderId: "812806534642",
+    appId: "1:812806534642:web:4b2d061b8125ef49c1a76b",
+    measurementId: "G-ESH7ZQBNQC"
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

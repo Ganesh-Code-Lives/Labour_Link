@@ -1,8 +1,19 @@
 import React from 'react';
 
+const STATUS_LABELS = {
+    applied:     'Applied',
+    pending:     'Applied',      // backward compat for old data
+    accepted:    'Accepted',
+    completed:   'Task Completed',
+    rejected:    'Declined',
+    available:   'Available',
+    unavailable: 'Unavailable',
+};
+
 const StatusBadge = ({ status }) => {
     const getStatusStyles = (statusVal) => {
         switch (statusVal?.toLowerCase()) {
+            case 'applied':
             case 'pending':
                 return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800/50';
             case 'accepted':
@@ -20,13 +31,14 @@ const StatusBadge = ({ status }) => {
         }
     };
 
-    const formattedStatus = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+    const displayLabel = STATUS_LABELS[status?.toLowerCase()] || (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown');
 
     return (
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusStyles(status)}`}>
-            {formattedStatus}
+            {displayLabel}
         </span>
     );
 };
 
 export default StatusBadge;
+

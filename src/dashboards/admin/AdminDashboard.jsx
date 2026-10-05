@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDashboardStats, getCategories, addCategory, deleteCategory, seedDatabase } from '../../firebase/services';
+import { getDashboardStats, getCategories, addCategory, deleteCategory, seedDatabase, forceResetDatabase } from '../../firebase/services';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
@@ -15,6 +15,7 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [addingCat, setAddingCat] = useState(false);
     const [seeding, setSeeding] = useState(false);
+    const [resetting, setResetting] = useState(false);
 
     const handleSeed = async () => {
         try {
@@ -25,6 +26,20 @@ const AdminDashboard = () => {
             toast.error("Failed to seed database.");
         } finally {
             setSeeding(false);
+        }
+    };
+
+    const handleForceReset = async () => {
+        if (!window.confirm("WARNING: This will delete all old categories and students, then re-seed with student-focused data. Proceed?")) return;
+        try {
+            setResetting(true);
+            await forceResetDatabase();
+            toast.success("Database wiped and seeded with student tasks!");
+            window.location.reload();
+        } catch (error) {
+            toast.error("Failed to reset database.");
+        } finally {
+            setResetting(false);
         }
     };
 
@@ -90,7 +105,10 @@ const AdminDashboard = () => {
     return (
         <div className="space-y-8 animate-fade-in">
 
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-3 mb-4">
+                <Button variant="outline" onClick={handleForceReset} isLoading={resetting} className="text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950">
+                    Force Reset Database
+                </Button>
                 <Button variant="outline" onClick={handleSeed} isLoading={seeding}>
                     Seed Dummy Data
                 </Button>
@@ -98,17 +116,17 @@ const AdminDashboard = () => {
 
             {/* Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricCard icon={Users} title="Total Customers" value={stats.users} color="text-blue-600" bg="bg-blue-100 dark:bg-blue-900/30" />
-                <MetricCard icon={Briefcase} title="Total Labourers" value={stats.labourers} color="text-emerald-600" bg="bg-emerald-100 dark:bg-emerald-900/30" />
-                <MetricCard icon={ListIcon} title="Total Job Requests" value={stats.jobs} color="text-purple-600" bg="bg-purple-100 dark:bg-purple-900/30" />
-                <MetricCard icon={ListIcon} title="Completed Jobs" value={stats.completedJobs} color="text-yellow-600" bg="bg-yellow-100 dark:bg-yellow-900/30" />
+                <MetricCard icon={Users} title="Hiring Managers" value={stats.users} color="text-blue-600" bg="bg-blue-100 dark:bg-blue-900/30" />
+                <MetricCard icon={Briefcase} title="Active Students" value={stats.labourers} color="text-emerald-600" bg="bg-emerald-100 dark:bg-emerald-900/30" />
+                <MetricCard icon={ListIcon} title="Total Applications" value={stats.jobs} color="text-purple-600" bg="bg-purple-100 dark:bg-purple-900/30" />
+                <MetricCard icon={ListIcon} title="Completed Tasks" value={stats.completedJobs} color="text-yellow-600" bg="bg-yellow-100 dark:bg-yellow-900/30" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 {/* Charting Status */}
                 <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Job Requests by Status</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Applications by Status</h3>
                     <div className="h-72 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
@@ -124,7 +142,7 @@ const AdminDashboard = () => {
 
                 {/* Category Management */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Manage Categories</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Manage Skill Categories</h3>
 
                     <form onSubmit={handleAddCategory} className="flex gap-2 mb-6">
                         <Input

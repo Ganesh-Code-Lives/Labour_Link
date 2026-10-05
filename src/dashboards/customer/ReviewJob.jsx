@@ -23,7 +23,7 @@ const ReviewJob = () => {
     useEffect(() => {
         const fetchJob = async () => {
             try {
-                const jobRef = doc(db, 'jobRequests', id);
+                const jobRef = doc(db, 'applications', id);
                 const jobSnap = await getDoc(jobRef);
 
                 if (jobSnap.exists()) {
@@ -31,7 +31,7 @@ const ReviewJob = () => {
 
                     // Verify authority to review: Only if completed and the current user is the customer
                     if (jobData.status !== 'completed') {
-                        toast.error('You can only review completed jobs.');
+                        toast.error('You can only rate completed tasks.');
                         navigate('/customer');
                         return;
                     }
@@ -90,7 +90,7 @@ const ReviewJob = () => {
     return (
         <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Leave a Review</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Rate this Student</h2>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -133,7 +133,7 @@ const ReviewJob = () => {
                             rows="4"
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
-                            placeholder="How was the service? Would you recommend them?"
+                            placeholder="How was the task? Would you recommend this student?"
                             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-gray-900 transition-colors resize-none"
                         />
                     </div>
@@ -152,7 +152,7 @@ const ReviewJob = () => {
                             className="flex-1"
                             isLoading={submitting}
                         >
-                            Submit Review
+                            Submit Rating
                         </Button>
                     </div>
                 </form>

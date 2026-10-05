@@ -11,6 +11,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
+import LandingPage from './pages/LandingPage';
 
 // Customer Views
 import CustomerDashboard from './dashboards/customer/CustomerDashboard';
@@ -25,15 +26,18 @@ import ProfileSettings from './dashboards/labourer/ProfileSettings';
 import AdminDashboard from './dashboards/admin/AdminDashboard';
 import { AuthContext } from './context/AuthContext';
 
-const RootRedirect = () => {
-  const { userRole } = React.useContext(AuthContext);
+// Redirects authenticated users to their role dashboard
+const DashboardRedirect = () => {
+  const { userRole, currentUser } = React.useContext(AuthContext);
+
+  if (!currentUser) return <Navigate to="/" replace />;
 
   switch (userRole) {
     case 'pending': return <Navigate to="/onboarding" replace />;
     case 'customer': return <Navigate to="/customer" replace />;
     case 'labourer': return <Navigate to="/labourer" replace />;
     case 'admin': return <Navigate to="/admin" replace />;
-    default: return <Navigate to="/login" replace />;
+    default: return <Navigate to="/" replace />;
   }
 };
 
@@ -100,9 +104,11 @@ function App() {
 
             </Route>
 
-            {/* Default Catch-all */}
-            <Route path="/" element={<RootRedirect />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            {/* Landing page for unauthenticated visitors */}
+            <Route path="/" element={<LandingPage />} />
+            {/* Redirect authenticated users to their role dashboard */}
+            <Route path="/dashboard" element={<DashboardRedirect />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </Router>
